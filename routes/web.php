@@ -5,7 +5,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PostsController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
 
 Route::get('/', [HomeController::class, 'home'])
     ->name('home.index');
+    //->middleware('auth');
 
 Route::get('/contact', [HomeController::class, 'contact'])
     ->name('home.contact');
@@ -29,6 +30,8 @@ Route::get('/contact', [HomeController::class, 'contact'])
 // Route::get('/contact','HomeController@contact')->name('contact');
 
 Route::get('/single', AboutController::class);
+
+Auth::routes();
 
 
 

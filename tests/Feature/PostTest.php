@@ -4,13 +4,17 @@ namespace Tests\Feature;
 
 use App\Models\BlogPost;
 use App\Models\Comment;
-use Faker\Factory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use Tests\TestCase;
 
 class PostTest extends TestCase
 {
+    // Something wrong with this line of code not working propertly
+    // actingAs giving an error
+    //$this->actingAs($user);
+    // $this->actingAs($this->user())
+
     use RefreshDatabase;
 
     public function testNoBlogPostsWhenNothingInDatabase()
@@ -66,14 +70,22 @@ class PostTest extends TestCase
 
     public function testStoreValid()
     {
+       // $user = $this->user();
+
         $params = [
             'title' => 'Valid title',
             'content' => 'At least 10 characters'
         ];
 
+        // Something wrong with this line of code not working propertly
+        // actingAs giving an error
+        //$this->actingAs($user);
+
+
         // Simulating a HTTP request that would be in the browser like I would be submitting a form
         // It should redirect to the actual blog post page so we can check for the status
-        $this->post('/posts', $params)
+        $this->actingAs($this->user())
+            ->post('/posts', $params)
             ->assertStatus(302)         // Http code for succesful redirect being displayed and its called immediately after make in the the new blog post
             ->assertSessionHas('status'); // To check for the flash message shown when the new blog post is created. "status" is the name of the variable.
 
@@ -82,6 +94,7 @@ class PostTest extends TestCase
 
     public function testStoreFails()
     {
+
         $params = [
             'title' => 'x',
             'content' => 'x'
@@ -89,7 +102,8 @@ class PostTest extends TestCase
 
         // Simulating a HTTP request that would be in the browser like I would be submitting a form
         // It should redirect to the actual blog post page so we can check for the status
-        $this->post('/posts', $params)
+        $this->actingAs($this->user())
+            ->post('/posts', $params)
             ->assertStatus(302)         // Http code for succesful redirect being displayed and its called immediately after make in the the new blog post
             ->assertSessionHas('errors'); // errors is created automatically by Laravel to be used globally
 
@@ -111,6 +125,7 @@ class PostTest extends TestCase
         // Arrange
         // Create a blog post inside the database, and only then we will verify if it actually gets notified 
 
+
         $postData = [
             'title' => 'Test Title',
             'content' => 'Content of the blog post'
@@ -130,7 +145,8 @@ class PostTest extends TestCase
 
         // updating the post and checking the status of the new page and checks if really got redirected also
         // To update you could call PUT or PATCH METHOD because its on the route::list 
-        $this->put("/posts/{$post->id}", $params)
+        $this->actingAs($this->user())
+            ->put("/posts/{$post->id}", $params)
             ->assertStatus(302)         // Http code to check if it was redirect succesfullu and being displayed and its called immediatediatlly also
             ->assertSessionHas('status');
 
@@ -147,6 +163,7 @@ class PostTest extends TestCase
     public function testDeletePost()
     {
         // Arrange
+        $user = $this->user();
 
         $postData = [
             'title' => 'Test Title',
@@ -164,7 +181,8 @@ class PostTest extends TestCase
 
 
         // you change it based on the METHOD you see in the route::list in which case its DELETE
-        $this->delete("/posts/{$post->id}")
+        $this->actingAs($this->user())
+            ->delete("/posts/{$post->id}")
             ->assertStatus(302)              // Http code to check if it was redirect succesfullu and being displayed and its called immediatediatlly also
             ->assertSessionHas('status');
 
