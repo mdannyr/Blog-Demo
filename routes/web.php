@@ -22,11 +22,17 @@ use Illuminate\Support\Facades\Auth;
 
 Route::get('/', [HomeController::class, 'home'])
     ->name('home.index');
-    //->middleware('auth');
+//->middleware('auth');
 
 Route::get('/contact', [HomeController::class, 'contact'])
     ->name('home.contact');
 
+//Make sure the function /secret is an actual function in the HomeController:class
+//Make sure that return view is correct place as in the return view propertly
+// Check the HomeController::class which is located Homecontroller.php
+Route::get('/secret', [HomeController::class, 'secret'])
+    ->name('secret')
+    ->middleware('can:home.secret');            // allow only the admin to this link only even if somebody copies the same "secret" URL
 // Route::get('/contact','HomeController@contact')->name('contact');
 
 Route::get('/single', AboutController::class);
@@ -36,7 +42,7 @@ Auth::routes();
 
 
 
-Route::resource('posts', PostsController::class);//->only(['index', 'show', 'store', 'create','edit','update']);
+Route::resource('posts', PostsController::class); //->only(['index', 'show', 'store', 'create','edit','update']);
 
 // Route::get('/posts', function () use ($posts) {
 //     // compact($posts) === ['posts' => $posts])

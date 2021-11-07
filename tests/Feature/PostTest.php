@@ -124,16 +124,19 @@ class PostTest extends TestCase
     {
         // Arrange
         // Create a blog post inside the database, and only then we will verify if it actually gets notified 
-
-
         $postData = [
             'title' => 'Test Title',
             'content' => 'Content of the blog post'
         ];
 
+
+        $allowUser = $this->user();
         $post = new BlogPost();
         $post->fill($postData);
+        $post->user_id = 49;
         $post->save();
+
+        $allowUser->id = $post->user_id;
 
         $this->assertDatabaseHas('blog_posts', $postData);
 
@@ -145,7 +148,7 @@ class PostTest extends TestCase
 
         // updating the post and checking the status of the new page and checks if really got redirected also
         // To update you could call PUT or PATCH METHOD because its on the route::list 
-        $this->actingAs($this->user())
+        $this->actingAs($allowUser)
             ->put("/posts/{$post->id}", $params)
             ->assertStatus(302)         // Http code to check if it was redirect succesfullu and being displayed and its called immediatediatlly also
             ->assertSessionHas('status');
@@ -155,15 +158,14 @@ class PostTest extends TestCase
 
         // Checking on the database of the original title and content are missing. Should come out true to pass test succcefully because they were change!
         $this->assertDatabaseMissing('blog_posts', $postData);
-
+        //$this->assertDatabaseMissing('blog_posts', $postData);
         // Checking on the database if the new update title and content are SAVED. should come out true to pass test
-        $this->assertDatabaseHas('blog_posts', $params);
+        $this->assertDatabaseHas('blog_posts', ['title' => 'A new named title',]);
     }
 
     public function testDeletePost()
     {
         // Arrange
-        $user = $this->user();
 
         $postData = [
             'title' => 'Test Title',
@@ -173,22 +175,27 @@ class PostTest extends TestCase
         //$post = $this->createDummyBlogPost();
 
         // Create a new Blog Post
+        $allowUser = $this->user();
         $post = new BlogPost();
         $post->fill($postData);
+        $post->user_id = 50;
         $post->save();
 
-        $this->assertDatabaseHas('blog_posts', $postData);
+        $allowUser->id = $post->user_id;
 
+        $this->assertDatabaseHas('blog_posts', $postData);
+        
 
         // you change it based on the METHOD you see in the route::list in which case its DELETE
-        $this->actingAs($this->user())
+        $this->actingAs($allowUser)
             ->delete("/posts/{$post->id}")
             ->assertStatus(302)              // Http code to check if it was redirect succesfullu and being displayed and its called immediatediatlly also
             ->assertSessionHas('status');
 
         $this->assertEquals(session('status'), 'Blog post was deleted!');
 
-        $this->assertDatabaseMissing('blog_posts', $postData);
+        //$this->assertDatabaseMissing('blog_posts', $postData);
+        $this->assertSoftDeleted('blog_posts', $postData);
     }
 
     private function createDummyBlogPost(): BlogPost
@@ -198,6 +205,12 @@ class PostTest extends TestCase
         // $post->content ='Content of the blog post!';
         // $post->save();
 
+        // We did some changes to the create inside because right now the fake "factory" Blogpost
+        // we are creating it so the both user_id(foregin key) inside the BlogPosttable and the user()->id (normal user) are equal?!
+        // We are doing this because new created users dont have access to any BlogPosts (our polices are set this way thats why!!)
+        // We need to do this matching user_id(foreign key) with the user()->id so they could have access to the BlogPost
+        // So they could update/Edit on it
+        // To not get confuse check the add_user_to_blog_posts_table in database migration for the relation between user and blogposts
         $post = BlogPost::factory()->newTitle()->create();
 
 
