@@ -3,6 +3,7 @@
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PostsController;
+use App\Http\Controllers\PostTagController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,7 +40,10 @@ Route::get('/single', AboutController::class);
 
 Auth::routes();
 
-
+// These two routes are go to the same ROUTE!!!
+// Route::get('/posts/tag/{id}','PostTagController@index');
+Route::get('/posts/tag/{tag}',[PostTagController::class,'index'])
+     ->name('posts.tags.index');
 
 
 Route::resource('posts', PostsController::class); //->only(['index', 'show', 'store', 'create','edit','update']);

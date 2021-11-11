@@ -5,10 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePost;
 use App\Models\BlogPost;
 use App\Models\User;
-use Illuminate\Auth\Events\Validated;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-
+use Illuminate\Support\Facades\Cache;
 
 use Illuminate\Http\Request;
 
@@ -28,17 +26,7 @@ class PostsController extends Controller
      */
     public function index()
     {
-        DB::enableQueryLog();
 
-
-        // Lazy Loading
-        // $posts = BlogPost::all();
-
-        // Assign the posts variable to all the BlogPosts that contain comments
-        // Also gets() all those posts and put intp $posts variable
-
-        // A better query to break it down and be faster and performance
-        // $posts = BlogPost::with('comments')->get();
 
         // // For each regular post in the big list of $posts
         // foreach($posts as $post)
@@ -51,19 +39,13 @@ class PostsController extends Controller
         //     }
         // }
 
-        // dd(DB::getQueryLog());
-
-
-        // posts => BlogPost::all() it gets all the Blog posts with no querys thats why Query is important
-        //return view('posts.index', ['posts' => BlogPost::all()]);
-
-
         return view('posts.index', [
                                                                                 //MostCommented and WithMostBlogPosts are query methods so there not case senstive so that means MOSTCOMMENTED should call the same function also
-            'posts' => BlogPost::latest()->withCount('comments')->get(),        // 'comments' is the name of the database inside migrations
-            'mostCommented' => BlogPost::MostCommented()->take(5)->get(),       //The method is from scopeMostCommented but you dont put'scope'-> take(how many AT MOST do we want !!! in this case 5)
-            'mostActive' => User::WithMostBlogPosts()->take(5)->get(),          // same concept as in the above line
-            'mostActiveLastMonth' => User::WithMostBlogPostsLastMonth()->take(5)->get(),
+            'posts' => BlogPost::latest()->withCount('comments')
+                    ->with('user')->with('tags')->get(),        // 'comments' is the name of the database inside migrations
+            // 'mostCommented' => $mostCommented,       //The method is from scopeMostCommented but you dont put'scope'-> take(how many AT MOST do we want !!! in this case 5)
+            // 'mostActive' => $mostActive,          // same concept as in the above line
+            // 'mostActiveLastMonth' => $mostActiveLastMonth,
         ]);
     }
 
@@ -117,6 +99,55 @@ class PostsController extends Controller
      */
     public function show($id)
     {
+
+        // Creating a tag for the blog post
+        $blogPost = Cache::tags(['blog-post'])->remember("blog-post-{$id}", 60, function() use($id){
+            return BlogPost::with('comments')->with('tags')->with('user')->findOrFail($id);
+        });
+
+        $sessionId = session()->getId();
+        $counterKey = "blog-post-{$id}-counter";
+        $usersKey = "blog-post-{$id}-users";
+        
+
+        $users = Cache::tags(['blog-post'])->get($usersKey, []);
+        $usersUpdate = [];
+        $diffrence = 0;
+        $now = now();
+
+        foreach($users as $session => $lastVist){
+            if($now->diffInMinutes($lastVist) >= 1)
+            {
+                $diffrence--;
+            }
+            else
+            {
+                $usersUpdate[$session] = $lastVist;
+            }
+        }
+
+        if(
+            !array_key_exists($sessionId, $users) 
+            || $now->diffInMinutes($users[$sessionId]) >= 1
+        )
+        {
+            $diffrence++;
+        }
+
+        $usersUpdate[$sessionId] = $now;
+        Cache::tags(['blog-post'])->forever($usersKey, $usersUpdate);
+
+        if(!Cache::tags(['blog-post'])->has($counterKey))
+        {
+            Cache::tags(['blog-post'])->forever($counterKey, 1);
+        }
+        else
+        {
+            Cache::tags(['blog-post'])->increment($counterKey, $diffrence); 
+        }
+          
+
+        $counter = Cache::tags(['blog-post'])->get($counterKey);
         //
         //abort_if(!isset($this->posts[$id]), 404);
 
@@ -132,7 +163,9 @@ class PostsController extends Controller
         // Check the BlogPost::class in the Comment function its already set the query so we dont have to call it here
         // Saves time 
         return view('posts.show', [
-            'post' => BlogPost::with('comments')->findOrFail($id)]);
+            'post' => $blogPost,
+            'counter' => $counter,
+        ]);
 
         // return view('posts.show', ['post' => BlogPost::with('comments')]);
     }

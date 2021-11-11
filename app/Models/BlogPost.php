@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 
 class BlogPost extends Model
 {   
@@ -28,6 +29,11 @@ class BlogPost extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function tags()
+    {
+       return $this->belongsToMany(Tag::class)->withTimestamps();
     }
 
     // Adding Query for the local BlogPosts
@@ -76,6 +82,14 @@ class BlogPost extends Model
             $blogPost->comments()->delete();        
         });
 
+        // important to know how to remove data from cache so you could update and fetch data directly and not through cache
+        // If you dont do it then you would see the old cache data instead the new DATA UPDATED
+        static::updating(function (BlogPost $blogPost)
+        {   
+            Cache::forget("blog-post-{$blogPost->id}");
+            # code...
+        });
+
         static::restoring(function (BlogPost $blogPost)
         {
             // You need this command and function to fully restore the  Blog Post
@@ -85,6 +99,8 @@ class BlogPost extends Model
             $blogPost->comments()->restore();
             
         });
+
+
 
 
         
